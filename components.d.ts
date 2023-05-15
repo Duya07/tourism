@@ -19,7 +19,9 @@ declare module '@vue/runtime-core' {
     NImage: typeof import('naive-ui')['NImage']
     NInput: typeof import('naive-ui')['NInput']
     NSpace: typeof import('naive-ui')['NSpace']
+    PointInfo: typeof import('./src/components/PointInfo.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    Temperature: typeof import('./src/components/Temperature.vue')['default']
   }
 }

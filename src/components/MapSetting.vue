@@ -41,24 +41,20 @@ function changeLayer() {
 }
 
 function selectNormalLayer() {
-    store.layer = ConstLayer.NOMALLAYER;
+    store.LAYER = ConstLayer.NOMALLAYER;
 }
 
 function selectTileLayer() {
-    store.layer = ConstLayer.TILELAYER;
+    store.LAYER = ConstLayer.TILELAYER;
 } 
 </script>
 
 <style scoped>
-.settingDiv {
-    z-index: 2;
-    position: relative;
-}
 
 .hSpace {
-    position: fixed;
+    position: relative;
     top: 1rem;
-    right: 1rem;
+    float: right;
 }
 
 .layerButton {

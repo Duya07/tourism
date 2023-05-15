@@ -1,17 +1,22 @@
 <template>
     <div class="searchDiv">
-        <n-icon size="30" class="open" color="#101014" @click="changeOpen">
-            <ArrowBarUp />
+        <n-icon size="30" class="open" color="#101014" @click="changeOpen" @wheel="handleWheel">
+            <div v-if="isOpen">
+                <ArrowBarDown />
+            </div>
+            <div v-else>
+                <ArrowBarUp />
+            </div>
         </n-icon>
         <div class="card">
-            <n-input class="input" round placeholder="搜索位置" clearable />
+            <n-input class="input" round placeholder="搜索位置" clearable @wheel="handleWheel"/>
             <div class="detail_wrap" :class="isOpen ? 'active' : ''">
                 <n-space class="vSpace" vertical>
                     <div>
                         <n-icon size="20" class="arrowIcon">
                             <ArrowLeft></ArrowLeft>
                         </n-icon>
-                        <n-space justify="end" inline="ture" style="width: 93%;">
+                        <n-space justify="end" :inline="true" class="endSpace">
                             <n-icon size="20" class="arrowIcon" color="#101014">
                                 <ArrowRight></ArrowRight>
                             </n-icon>
@@ -23,7 +28,7 @@
                     <n-card class="planCard" :theme-overrides="cardThemeOverrides">
                         <n-input type="text" placeholder="输入标题" class="titleInput" />
                         <n-divider />
-                        <div>
+                        <div v-if="doubleLinkedList.isEmpty()">
                             请选择一个起点
                         </div>
                     </n-card>
@@ -36,13 +41,14 @@
 <script setup lang="ts">
 import { ArrowLeft, ArrowRight } from '@vicons/fa'
 import { AlignSpaceEvenlyHorizontal20Filled } from "@vicons/fluent"
-import { ArrowBarUp } from '@vicons/tabler'
+import { ArrowBarUp, ArrowBarDown } from '@vicons/tabler'
 import type { CardProps } from 'naive-ui'
 import { DoubleLinkedList } from 'datastructure-ts/src/List/DoubleLinkedList'
-import type { geographyNode } from '@/class/geographyNode'
+import type { geographyNode } from '@/class/GeographyNode'
 import { computed, ref } from 'vue'
 
-const doubleLinkedList = DoubleLinkedList<geographyNode>;
+const doubleLinkedList = new DoubleLinkedList<geographyNode>;
+    
 
 const isOpen = ref(true);
 
@@ -56,12 +62,16 @@ const cardThemeOverrides: CardThemeOverrides = {
     borderRadius: "15px",
 }
 
+function handleWheel(event: any) {
+  event.preventDefault();
+}
 </script>
 
 <style scoped>
 
 .searchDiv{
     display: flex;
+    width: 100%;
 }
 
 .open {
@@ -72,7 +82,7 @@ const cardThemeOverrides: CardThemeOverrides = {
 }
 
 .card {
-    width: 23%;
+    width: 100%;
 }
 
 .input {
@@ -125,5 +135,9 @@ const cardThemeOverrides: CardThemeOverrides = {
 .titleInput:deep(input:hover) {
     background-position-x: left;
     background-size: 100% 2px;
+}
+
+.endSpace {
+    width: 93%;
 }
 </style>

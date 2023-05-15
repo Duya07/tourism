@@ -1,85 +1,123 @@
 <template>
-  <!-- 地图 -->
-  <div id="container"></div>
+  <div id="container">
+    <div class="leftTopDiv">
+      <MapSearch></MapSearch>
+    </div>
+    <MapSetting @wheel="handleWheel" class="setting"></MapSetting>
+  </div>
 </template>
 
 <script setup lang="ts">
 import AMapLoader from '@amap/amap-jsapi-loader';
-import { shallowRef } from '@vue/reactivity'
-import { onMounted, ref } from 'vue';
+import { onMounted, shallowRef, ref, watch, createVNode, render } from 'vue';
 import ConstLayer from '../util/ConstLayer';
-import ConstSetting from '../util/ConstSetting';
 import { useMapStore } from '@/stores/MapStore.js';
+import { dailyWeather } from '../api/WeatherApi';
+import Temperature from '@/components/Temperature.vue';
+
+import MapSetting from '@/components/MapSetting.vue'
+import MapSearch from '@/components/MapSearch.vue'
+
+(window as any)._AMapSecurityConfig = {
+  securityJsCode: 'e199d755238166ae561f99924ac30238',
+}
 
 const store = useMapStore();
 
 const map = shallowRef(null);
-let localMap: any;
-let amap: any;
-let tempLayer: any;
+var localMap: any;
+var AMap: any;
+var tempLayer: any;
+var markers = [];
+var tempMarker: any;
 
 
-// 初始化地图
-const initMap = () => {
-  AMapLoader.load({
-    key: "b7d93671b28fcc90455eb35defa5c090", // 申请好的Web端开发者Key，首次调用 load 时必填
-    version: "2.0", // 指定要加载的 JSAPI 的版本，缺省时默认为 1.4.15
+async function initMap() {
+  AMap = await AMapLoader.load({
+    key: "b7d93671b28fcc90455eb35defa5c090",
+    version: "2.0",
     plugins: [
-      "AMap.Scale", //比例尺，显示当前地图中心的比例尺
-      "AMap.Geolocation", //定位，提供了获取用户当前准确位置、所在城市的方法
+      "AMap.Scale",
+      "AMap.Geolocation",
     ],
   })
-    .then((AMap) => {
-      amap = AMap;
-      localMap = new AMap.Map("container", {//设置地图容器id
-        zoom: 14, //初始化地图层级
-        viewMode: "3D", //是否为3D地图模式
-        center: [116.397436, 39.909165], //初始化地图中心点位置
-        dragEnable: true, //禁止鼠标拖拽
-        scrollWheel: true, //鼠标滚轮放大缩小
-        doubleClickZoom: true, //双击放大缩小
-      });
-      
-      localMap.addControl(new AMap.Geolocation());
-      localMap.addControl(new AMap.Scale());
+  localMap = new AMap.Map("container", {
+    zoom: 14,
+    viewMode: "3D",
+    center: [116.397436, 39.909165],
+    isHotspot: true,
+  });
 
-      // 保存的数据显示默认不是 标准地图 切换成目标地图
-      switch (store.layer) {
-        // 卫星地图
-        case ConstLayer.TILELAYER: {
-          tempLayer = new amap.TileLayer.Satellite();
-          localMap.add(tempLayer);
-        }
-      }
-    })
-    .catch((e) => {
-      console.log(e);
+  localMap.addControl(new AMap.Geolocation());
+  localMap.addControl(new AMap.Scale());
+
+  localMap.on('hotspotclick', async function (e: any) {
+    if (tempMarker) {
+      tempMarker.setMap(null);
+      tempMarker = null;
+    }
+    tempMarker = new AMap.Marker({
+      map: localMap,
+      position: [e.lnglat.lng, e.lnglat.lat],
     });
+    // 打开侧边栏
+    store.ISOPEN = true;
+
+    // 把地理位置存入 store
+    store.POSITION = { lng: e.lnglat.lng, lat: e.lnglat.lat, name: e.name };
+
+
+    // var response = await dailyWeather(e.lnglat.lng, e.lnglat.lat);
+    // var weatherData = await response.json();
+
+    // var infoWindow = new AMap.InfoWindow({
+    //     isCustom: true,  //使用自定义窗体
+    //     content: createInfoWindow(e, weatherData),
+    //     offset: new AMap.Pixel(16, -45),
+    // });
+    // infoWindow.open(localMap, e.lnglat)
+  });
+
+
+  switch (store.LAYER) {
+    case ConstLayer.TILELAYER: {
+      tempLayer = new AMap.TileLayer.Satellite();
+      localMap.add(tempLayer);
+    }
+  }
 }
 
 onMounted(() => {
   initMap();
 })
 
+function createInfoWindow(postion: any, weatherData: any) {
 
-store.$subscribe((mutation, state) => {
+  const app = createVNode(Temperature, {
+    ...postion,
+    ...weatherData.result.daily,
+  });
+  const mountNode = document.createElement("div");
+  render(app, mountNode);
+  return mountNode;
+}
 
-  switch ((mutation.events as any).key) {
-    // 修改的是 图层 的话
-    case ConstSetting.LAYER: {
-      if (tempLayer != null) {
-        localMap.remove(tempLayer);
-      }
-      switch (state.layer) {
-        case ConstLayer.TILELAYER: {
-          tempLayer = new amap.TileLayer.Satellite();
-          localMap.add(tempLayer);
-        }
-      }
+// 修改图层
+watch(() => store.LAYER, (newLayer) => {
+  if (tempLayer != null) {
+    localMap.remove(tempLayer);
+  }
+  switch (newLayer) {
+    case ConstLayer.TILELAYER: {
+      tempLayer = new AMap.TileLayer.Satellite();
+      localMap.add(tempLayer);
     }
   }
 })
 
+function handleWheel(event: any) {
+  event.preventDefault();
+}
 </script>
 
 <style scoped>
@@ -88,5 +126,19 @@ store.$subscribe((mutation, state) => {
   width: 100%;
   padding: 0px;
   margin: 0px;
+}
+
+.leftTopDiv {
+    position: fixed;
+    z-index: 4;
+    top: 1rem;
+    left: 1rem;
+    width: 28%;
+}
+
+.setting {
+    position: absolute;
+    z-index: 4;
+    right: 1rem;
 }
 </style>
